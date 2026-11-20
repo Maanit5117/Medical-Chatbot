@@ -234,7 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (err.name === "AbortError" || err.isTimeout) {
         friendlyMessage = "⏱️ Request timed out after 60 seconds. The server took too long to respond. Please try again.";
       } else if (err.status === 504 || errStr.includes("TIMEOUT_ERROR") || errStr.toLowerCase().includes("timed out") || errStr.toLowerCase().includes("timeout")) {
-        friendlyMessage = "⏱️ The AI model timed out after 30 seconds. Please try again.";
+        friendlyMessage = "⏱️ The AI service timed out. Please try again.";
       } else if (err.isNetworkError || err.name === "TypeError" || (!err.status && err.message.includes("fetch"))) {
         friendlyMessage = "Can't reach the server. Is it running?";
       } else if (err.status === 429 || errStr.includes("RESOURCE_EXHAUSTED") || errStr.includes("429") || errStr.toLowerCase().includes("quota")) {

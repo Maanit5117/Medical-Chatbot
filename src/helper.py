@@ -30,7 +30,6 @@ CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 TOP_K = 4
 SIMILARITY_THRESHOLD = float(os.environ.get("SIMILARITY_THRESHOLD", "0.50"))
-GEMINI_TIMEOUT = float(os.environ.get("GEMINI_TIMEOUT", "30.0"))
 MAX_OUTPUT_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS", "1024"))
 
 
@@ -74,7 +73,6 @@ def get_llm():
         thinking_level="minimal",
         max_retries=0,
         max_output_tokens=MAX_OUTPUT_TOKENS,
-        timeout=GEMINI_TIMEOUT,
     )
 
 

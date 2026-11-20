@@ -91,25 +91,12 @@ def process_query(question: str):
             "answer": answer,
             "sources": sources
         }, 200
-    except TimeoutError as te:
-        logger.error(f"Timeout (30s) while querying AI service for '{question.strip()[:80]}':\n{traceback.format_exc()}")
-        return {
-            "error": "TIMEOUT_ERROR",
-            "message": "The AI service timed out after 30 seconds. Please try again.",
-            "detail": str(te)
-        }, 504
     except Exception as err:
         err_str = str(err)
         err_lower = err_str.lower()
         logger.error(f"Error processing query '{question.strip()[:80]}':\n{traceback.format_exc()}")
 
-        if "timeout" in err_lower or "timed out" in err_lower or "deadline" in err_lower:
-            return {
-                "error": "TIMEOUT_ERROR",
-                "message": "The request timed out while communicating with the AI service. Please try again.",
-                "detail": err_str
-            }, 504
-        elif "429" in err_str or "resource_exhausted" in err_lower or "quota" in err_lower:
+        if "429" in err_str or "resource_exhausted" in err_lower or "quota" in err_lower:
             return {
                 "error": "RESOURCE_EXHAUSTED",
                 "message": "Daily AI usage limit reached or quota exhausted. Please try again later.",
