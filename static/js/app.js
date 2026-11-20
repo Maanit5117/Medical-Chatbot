@@ -231,7 +231,11 @@ document.addEventListener("DOMContentLoaded", () => {
       let friendlyMessage = "Something went wrong on our side. Please try again.";
       const errStr = (err.errorBody || err.message || "").toString();
 
-      if (err.isNetworkError || err.name === "TypeError" || (!err.status && err.message.includes("fetch"))) {
+      if (err.name === "AbortError" || err.isTimeout) {
+        friendlyMessage = "⏱️ Request timed out after 60 seconds. The server took too long to respond. Please try again.";
+      } else if (err.status === 504 || errStr.includes("TIMEOUT_ERROR") || errStr.toLowerCase().includes("timed out") || errStr.toLowerCase().includes("timeout")) {
+        friendlyMessage = "⏱️ The AI model timed out after 30 seconds. Please try again.";
+      } else if (err.isNetworkError || err.name === "TypeError" || (!err.status && err.message.includes("fetch"))) {
         friendlyMessage = "Can't reach the server. Is it running?";
       } else if (err.status === 429 || errStr.includes("RESOURCE_EXHAUSTED") || errStr.includes("429") || errStr.toLowerCase().includes("quota")) {
         friendlyMessage = "Daily AI usage limit reached. Please try again later.";
@@ -257,34 +261,54 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Fetch logic with fallback endpoints
+  // Fetch logic with fallback endpoints and 60s AbortController
   async function fetchChatResponse(query) {
     let res;
     let endpoint = "/api/chat";
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 60000); // 60s client-side timeout
 
     try {
-      res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: query }),
-      });
-    } catch (fetchErr) {
-      // If /api/chat fails, try fallback to /get (classic flask chatbot pattern)
       try {
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: query }),
+          signal: controller.signal,
+        });
+      } catch (fetchErr) {
+        if (fetchErr.name === "AbortError") {
+          throw fetchErr;
+        }
+        // If /api/chat fails (network), try fallback to /get
         endpoint = `/get?msg=${encodeURIComponent(query)}`;
-        res = await fetch(endpoint, { method: "GET" });
-      } catch (fallbackErr) {
-        const netErr = new Error("NETWORK_FAILURE");
-        netErr.isNetworkError = true;
-        throw netErr;
+        res = await fetch(endpoint, {
+          method: "GET",
+          signal: controller.signal,
+        });
       }
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === "AbortError") {
+        const timeoutErr = new Error("Request timed out after 60 seconds.");
+        timeoutErr.name = "AbortError";
+        timeoutErr.isTimeout = true;
+        throw timeoutErr;
+      }
+      const netErr = new Error("NETWORK_FAILURE");
+      netErr.isNetworkError = true;
+      throw netErr;
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     if (!res.ok) {
       let errorBody = "";
       try {
         const json = await res.json();
-        errorBody = json.error || json.detail || json.message || JSON.stringify(json);
+        errorBody = json.message || json.error || json.detail || JSON.stringify(json);
       } catch (_) {
         try {
           errorBody = await res.text();
@@ -325,8 +349,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const bubble = document.createElement("div");
     bubble.className = "message-bubble";
     if (isError) {
+      bubble.classList.add("error-bubble");
       bubble.style.borderColor = "#fca5a5";
       bubble.style.background = "#fff5f5";
+      bubble.style.color = "#991b1b";
     }
 
     bubble.innerHTML = formatMarkdown(text);

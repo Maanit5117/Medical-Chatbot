@@ -2,6 +2,8 @@ import json
 import logging
 import os
 import sys
+import time
+import traceback
 from pathlib import Path
 
 # Setup logging
@@ -68,7 +70,7 @@ def check_pinecone_health():
 
 
 def process_query(question: str):
-    """Query the RAG pipeline and format answer + sources."""
+    """Query the RAG pipeline and format answer + sources with error and timeout handling."""
     if not question or not question.strip():
         return {"error": "Query cannot be empty."}, 400
 
@@ -89,12 +91,36 @@ def process_query(question: str):
             "answer": answer,
             "sources": sources
         }, 200
+    except TimeoutError as te:
+        logger.error(f"Timeout (30s) while querying AI service for '{question.strip()[:80]}':\n{traceback.format_exc()}")
+        return {
+            "error": "TIMEOUT_ERROR",
+            "message": "The AI service timed out after 30 seconds. Please try again.",
+            "detail": str(te)
+        }, 504
     except Exception as err:
-        logger.exception("Error processing query:")
         err_str = str(err)
-        if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
-            return {"error": "RESOURCE_EXHAUSTED", "detail": err_str}, 429
-        return {"error": "INTERNAL_ERROR", "detail": err_str}, 500
+        err_lower = err_str.lower()
+        logger.error(f"Error processing query '{question.strip()[:80]}':\n{traceback.format_exc()}")
+
+        if "timeout" in err_lower or "timed out" in err_lower or "deadline" in err_lower:
+            return {
+                "error": "TIMEOUT_ERROR",
+                "message": "The request timed out while communicating with the AI service. Please try again.",
+                "detail": err_str
+            }, 504
+        elif "429" in err_str or "resource_exhausted" in err_lower or "quota" in err_lower:
+            return {
+                "error": "RESOURCE_EXHAUSTED",
+                "message": "Daily AI usage limit reached or quota exhausted. Please try again later.",
+                "detail": err_str
+            }, 429
+        else:
+            return {
+                "error": "API_ERROR",
+                "message": "An error occurred with the AI service. Please try again.",
+                "detail": err_str
+            }, 502
 
 
 # ---------------------------------------------------------------------------
