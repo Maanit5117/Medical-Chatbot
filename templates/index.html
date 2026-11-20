@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediRAG</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <!-- Preconnect and fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩺</text></svg>">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Left Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>MediRAG</h1>
+            <p>Answers drawn from the Gale Encyclopedia of Medicine (2nd edition)</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-content">
+        <!-- System Status Card -->
+        <div class="sidebar-card">
+          <h3>
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+            </svg>
+            System Status
+          </h3>
+          <div class="info-item">
+            <span class="info-label">Pipeline:</span>
+            <div class="status-badge">
+              <div class="pulse-dot"></div>
+              <span>Online</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Vector Store:</span>
+            <span class="info-val">Pinecone AWS</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Index:</span>
+            <span class="info-val">medical-chatbot</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Embeddings:</span>
+            <span class="info-val">qwen3-embedding</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Synthesis:</span>
+            <span class="info-val">gemini-3.6-flash</span>
+          </div>
+        </div>
+
+        <!-- Sample Questions -->
+        <div class="sidebar-card">
+          <h3>
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Sample Inquiries
+          </h3>
+          <div class="sample-queries">
+            <button class="query-chip" data-query="What is acne and how is it treated?">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+              <span>What is acne?</span>
+            </button>
+            <button class="query-chip" data-query="What is gigantism?">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+              <span>What is gigantism?</span>
+            </button>
+            <button class="query-chip" data-query="What causes byssinosis?">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+              <span>What causes byssinosis?</span>
+            </button>
+            <button class="query-chip" data-query="What is bursitis and how to prevent it?">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+              <span>What is bursitis?</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="btn-secondary" id="clearChatBtn">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+          </svg>
+          Clear Conversation
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Chat Workspace -->
+    <main class="chat-main">
+      <!-- Top Bar -->
+      <header class="chat-header">
+        <div class="chat-header-title">
+          <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div class="header-meta">
+            <h2>MediRAG</h2>
+            <p>Answers drawn from the Gale Encyclopedia of Medicine (2nd edition)</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn-icon" id="infoModalBtn" title="System Architecture & Details">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Safety Disclaimer Banner -->
+      <div class="disclaimer-banner">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span>
+          <strong>Medical Notice:</strong> Answers are synthesized strictly from indexed medical references for informational purposes only. Do not use for clinical diagnosis or emergency care.
+        </span>
+      </div>
+
+      <!-- Messages Stream -->
+      <div class="chat-messages" id="chatMessages">
+        <!-- Welcome Screen -->
+        <div class="welcome-container" id="welcomeScreen">
+          <div class="welcome-icon-box">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+          </div>
+          <h2>MediRAG</h2>
+          <p>
+            Ask clinical and health questions. Answers drawn from the <strong>Gale Encyclopedia of Medicine (2nd edition)</strong>.
+          </p>
+
+          <div class="welcome-suggestions">
+            <div class="suggestion-card" data-query="What is acne and what causes it?">
+              <h4>🩺 Acne Causes & Symptoms</h4>
+              <p>Understand dermatological pathology, sebaceous glands & triggers</p>
+            </div>
+            <div class="suggestion-card" data-query="What is gigantism and how is it diagnosed?">
+              <h4>🔬 Gigantism Details</h4>
+              <p>Pituitary growth hormone excess, diagnostic tests & features</p>
+            </div>
+            <div class="suggestion-card" data-query="What is byssinosis and who is at risk?">
+              <h4>🫁 Byssinosis Overview</h4>
+              <p>Occupational lung disease from textile dust, symptoms & prevention</p>
+            </div>
+            <div class="suggestion-card" data-query="What is bursitis and how is it treated?">
+              <h4>🦴 Bursitis Therapy</h4>
+              <p>Joint bursa inflammation, anti-inflammatory treatment & recovery</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input Area -->
+      <div class="chat-input-area">
+        <div class="input-container">
+          <textarea
+            id="userInput"
+            class="chat-input"
+            placeholder="Type your medical query here (e.g., What are the symptoms of asthma?)..."
+            rows="1"
+            maxlength="2000"
+          ></textarea>
+          <button id="sendBtn" class="btn-send" title="Send message" disabled>
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+        <div class="input-footer">
+          <span>Press <strong>Enter</strong> to send &bull; <strong>Shift + Enter</strong> for a new line</span>
+          <span id="charCounter">0 / 2000</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Info Modal -->
+  <div class="modal-overlay" id="infoModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>About this RAG Architecture</h3>
+        <button class="btn-icon" id="closeModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>This application implements a production-grade <strong>Retrieval-Augmented Generation (RAG)</strong> pattern tailored for clinical knowledge extraction:</p>
+        <ul>
+          <li><strong>Document Parsing:</strong> Ingested <em>The Gale Encyclopedia of Medicine</em> into 3,425 semantically coherent chunks (chunk size: 1,000, overlap: 200).</li>
+          <li><strong>Vector Embeddings:</strong> High-density embeddings produced via <code>qwen3-embedding:0.6b</code>.</li>
+          <li><strong>Vector Storage:</strong> Stored and indexed in <strong>Pinecone Serverless</strong> (AWS us-east-1) with cosine similarity metric.</li>
+          <li><strong>Retrieval & Synthesis:</strong> Top-K relevant passages are retrieved and injected into a constrained system prompt with <code>gemini-3.6-flash</code> to prevent hallucinations.</li>
+        </ul>
+        <p style="font-size:0.8rem; color:#64748b; margin-top:0.75rem;">
+          Constraint: The model is instructed to answer strictly based on retrieved context and refrain from diagnosing personal cases.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="document.getElementById('infoModal').classList.remove('open')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
