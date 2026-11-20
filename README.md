@@ -23,15 +23,15 @@ flowchart TD
         PDF["Medical Book PDF<br/>(Gale Encyclopedia)"] --> Loader["PyPDFLoader"]
         Loader --> Splitter["Recursive Splitter<br/>(1000 chunk / 200 overlap)"]
         Splitter --> Embed["Host Ollama<br/>(qwen3-embedding:0.6b, CPU)"]
-        Embed -->|Batch Upsert| Pinecone[("Pinecone Serverless<br/>AWS us-east-1")]
+        Embed -->|"Batch Upsert"| Pinecone[("Pinecone Serverless<br/>AWS us-east-1")]
     end
 
     subgraph Serving["Online Inference Serving Plane (app.py)"]
         User(["User Query"]) --> Gateway["Backend API (/api/chat)<br/>(Flask / Docker on EC2)"]
-        Gateway -->|1. Embed Query| OllamaHost["Host Ollama<br/>(localhost:11434, CPU)"]
-        OllamaHost -->|2. Query Vector| Gateway
-        Gateway -->|3. Vector Search (Internet)| Pinecone
-        Pinecone -->|4. Top-4 Chunks| Gateway
+        Gateway -->|"1. Embed Query"| OllamaHost["Host Ollama<br/>(localhost:11434, CPU)"]
+        OllamaHost -->|"2. Query Vector"| Gateway
+        Gateway -->|"3. Vector Search via Internet"| Pinecone
+        Pinecone -->|"4. Top-4 Chunks"| Gateway
         Gateway --> Prompt["Prompt Guardrails<br/>(Context Bound)"]
         Prompt --> Gemini["Google Gemini Flash<br/>(LCEL Chain)"]
         Gemini --> Response(["JSON Response<br/>(Answer + Excerpts)"])
