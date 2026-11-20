@@ -16,16 +16,26 @@ A production-style Medical Retrieval-Augmented Generation (RAG) system with auto
 
 The architecture separates offline corpus indexing from the real-time query serving plane:
 
-```
-[ Ingestion ]
-Medical Book (PDF) ──> PyPDFLoader ──> Recursive Splitter (1000/200)
-    ──> Ollama (qwen3-embedding:0.6b, CPU) ──> Pinecone Serverless (AWS us-east-1)
+```mermaid
+flowchart TD
+    subgraph Ingestion["Offline Ingestion Pipeline (store_index.py)"]
+        direction LR
+        PDF["Medical Book PDF<br/>(Gale Encyclopedia)"] --> Loader["PyPDFLoader"]
+        Loader --> Splitter["Recursive Splitter<br/>(1000 chunk / 200 overlap)"]
+        Splitter --> Embed["Host Ollama<br/>(qwen3-embedding:0.6b, CPU)"]
+        Embed -->|Batch Upsert| Pinecone[("Pinecone Serverless<br/>AWS us-east-1")]
+    end
 
-[ Online Inference ]
-User Query ──> Backend (/api/chat)
-    ├──> Host Ollama (localhost:11434) ──[ Query Vector ]
-    ├──> Pinecone Index (us-east-1 via Internet) ──[ Top-4 Chunks ]
-    └──> Google Gemini Flash + Prompt Guardrails ──> JSON Response (Answer + Excerpts)
+    subgraph Serving["Online Inference Serving Plane (app.py)"]
+        User(["User Query"]) --> Gateway["Backend API (/api/chat)<br/>(Flask / Docker on EC2)"]
+        Gateway -->|1. Embed Query| OllamaHost["Host Ollama<br/>(localhost:11434, CPU)"]
+        OllamaHost -->|2. Query Vector| Gateway
+        Gateway -->|3. Vector Search (Internet)| Pinecone
+        Pinecone -->|4. Top-4 Chunks| Gateway
+        Gateway --> Prompt["Prompt Guardrails<br/>(Context Bound)"]
+        Prompt --> Gemini["Google Gemini Flash<br/>(LCEL Chain)"]
+        Gemini --> Response(["JSON Response<br/>(Answer + Excerpts)"])
+    end
 ```
 
 ### Ingestion & Vector Indexing (`store_index.py`)
